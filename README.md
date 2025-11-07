@@ -42,6 +42,10 @@ Hand-only detection summary
     pointing: 239054
 ```
 
+<img width="800" alt="pointing_hand_size_hist" src="https://github.com/user-attachments/assets/e2b62a57-fed7-44a2-892b-543dea7487cf" />
+
+<img width="800" alt="not_pointing_hand_size_hist" src="https://github.com/user-attachments/assets/10bb9480-ba52-4805-ae8f-c206a1977e4b" />
+
 ```bash
 uv run python 03_dataset_convert_to_parquet.py \
 --annotation data/cropped/annotation.csv \
