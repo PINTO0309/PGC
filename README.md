@@ -4,9 +4,21 @@ Pointing gesture classification.
 https://gibranbenitez.github.io/IPN_Hand/ CC BY 4.0
 
 |id|Label|Gesture|Instances|
-|:-|:-|:-|-:|
+|-:|:-|:-|-:|
 |1|D0X|Non-gesture|1,431|
 |2|B0A|Pointing with one finger|1,010|
+|3|B0B|Pointing with two fingers|1,007|
+|4|G01|Click with one finger|200|
+|5|G02|Click with two fingers|200|
+|6|G03|Throw up|200|
+|7|G04|Throw down|201|
+|8|G05|Throw left|200|
+|9|G06|Throw right|200|
+|10|G07|Open twice|200|
+|11|G08|Double click with one finger|200|
+|12|G09|Double click with two fingers|200|
+|13|G10|Zoom in|200|
+|14|G11|Zoom out|200|
 
 
 ## Setup
