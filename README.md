@@ -67,22 +67,12 @@ uv run python 03_dataset_convert_to_parquet.py \
 --embed-images
 
 Split summary: {
-  'train_total': 430025,
-  'train_not_pointing': 263370,
-  'train_pointing': 166655,
-  'val_total': 107507,
-  'val_not_pointing': 65843,
-  'val_pointing': 41664
-}
-Saved dataset to data/dataset.parquet (537532 rows).
-
-Split summary: {
   'train_total': 434377,
-  'train_not_pointing': 263370,
-  'train_pointing': 171007,
+  'train_not_pointing': 271125,
+  'train_pointing': 163252,
   'val_total': 108595,
-  'val_not_pointing': 65843,
-  'val_pointing': 42752
+  'val_not_pointing': 67782,
+  'val_pointing': 40813,
 }
 Saved dataset to data/dataset.parquet (542972 rows).
 ```
