@@ -75,6 +75,16 @@ Split summary: {
   'val_pointing': 41664
 }
 Saved dataset to data/dataset.parquet (537532 rows).
+
+Split summary: {
+  'train_total': 434377,
+  'train_not_pointing': 263370,
+  'train_pointing': 171007,
+  'val_total': 108595,
+  'val_not_pointing': 65843,
+  'val_pointing': 42752
+}
+Saved dataset to data/dataset.parquet (542972 rows).
 ```
 
 Generated parquet schema (`split`, `label`, `class_id`, `image_path`, `source`):
