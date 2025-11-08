@@ -54,9 +54,9 @@ Hand-only detection summary
     pointing: 204065
 ```
 
-<img width="800" alt="pointing_hand_size_hist" src="https://github.com/user-attachments/assets/1eac3f32-e497-4457-a394-9a6923bf558b" />
+<img width="800" alt="pointing_hand_size_hist" src="https://github.com/user-attachments/assets/f793764c-76cf-4d75-a3ca-0e0a51be3fa6" />
 
-<img width="800" alt="not_pointing_hand_size_hist" src="https://github.com/user-attachments/assets/ac3ed8f4-e3f5-4ced-8199-9ac5b23f3f5c" />
+<img width="800" alt="not_pointing_hand_size_hist" src="https://github.com/user-attachments/assets/0fd01538-3065-489d-82b0-2cd684a9053f" />
 
 ```bash
 uv run python 03_dataset_convert_to_parquet.py \
