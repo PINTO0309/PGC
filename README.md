@@ -6,7 +6,7 @@ https://gibranbenitez.github.io/IPN_Hand/ CC BY 4.0
 |id|Label|Gesture|Instances|
 |-:|:-|:-|-:|
 |1|D0X|Non-gesture|1,431|
-|2|B0A|Pointing with one finger|1,010|
+|**2**|**B0A**|**Pointing with one finger**|**1,010**|
 |3|B0B|Pointing with two fingers|1,007|
 |4|G01|Click with one finger|200|
 |5|G02|Click with two fingers|200|
