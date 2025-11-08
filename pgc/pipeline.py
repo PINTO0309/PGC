@@ -9,6 +9,7 @@ import logging
 import math
 import re
 import sys
+from collections import Counter
 from contextlib import nullcontext
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -35,6 +36,7 @@ from .data import (
     build_weighted_sampler,
     collect_samples,
     create_dataloader,
+    oversample_samples,
     split_samples,
 )
 from .model import PGC, ModelConfig
@@ -318,6 +320,7 @@ class TrainConfig:
     output_dir: Path
     epochs: int = 30
     batch_size: int = 32
+    train_resampling: str = "none"
     lr: float = 1e-4
     weight_decay: float = 1e-4
     num_workers: int = 8
@@ -769,16 +772,42 @@ def train_pipeline(config: TrainConfig, verbose: bool = False) -> Dict[str, Any]
     train_transform, eval_transform = _build_transforms(config.image_size, mean, std)
     normalization = {"mean": list(mean), "std": list(std), "image_size": list(config.image_size)}
 
-    train_dataset = PGCDataset(splits["train"], transform=train_transform)
+    train_samples = list(splits["train"])
+    train_sampler = None
+    if config.train_resampling == "weighted":
+        class_counts = Counter(sample.label for sample in train_samples)
+        LOGGER.info(
+            "Training with WeightedRandomSampler (class 0=%d, class 1=%d).",
+            class_counts.get(0, 0),
+            class_counts.get(1, 0),
+        )
+        train_sampler = build_weighted_sampler(train_samples)
+    elif config.train_resampling == "balanced":
+        before_counts = Counter(sample.label for sample in train_samples)
+        train_samples = oversample_samples(train_samples, mode="balanced")
+        after_counts = Counter(sample.label for sample in train_samples)
+        LOGGER.info(
+            "Balanced oversampling expanded training samples from %d to %d "
+            "(class 0: %d -> %d, class 1: %d -> %d).",
+            sum(before_counts.values()),
+            len(train_samples),
+            before_counts.get(0, 0),
+            after_counts.get(0, 0),
+            before_counts.get(1, 0),
+            after_counts.get(1, 0),
+        )
+    elif config.train_resampling != "none":
+        raise ValueError(f"Unsupported train_resampling value: {config.train_resampling!r}")
+
+    train_dataset = PGCDataset(train_samples, transform=train_transform)
     val_dataset = PGCDataset(splits["val"], transform=eval_transform) if splits["val"] else None
     test_dataset = PGCDataset(splits["test"], transform=eval_transform) if splits["test"] else None
 
-    # train_sampler = build_weighted_sampler(splits["train"])
     train_loader = create_dataloader(
         train_dataset,
         batch_size=config.batch_size,
         shuffle=True,
-        sampler=None,
+        sampler=train_sampler,
         num_workers=config.num_workers,
     )
     val_loader = (
@@ -814,7 +843,7 @@ def train_pipeline(config: TrainConfig, verbose: bool = False) -> Dict[str, Any]
         "tensorboard_logdir": str(tb_dir),
     }
 
-    pos_weight = _compute_pos_weight(splits["train"]).to(device)
+    pos_weight = _compute_pos_weight(train_samples).to(device)
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     optimizer = torch.optim.AdamW(
@@ -1568,6 +1597,17 @@ def build_parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--output_dir", type=Path, required=True)
     train_parser.add_argument("--epochs", type=int, default=30)
     train_parser.add_argument("--batch_size", type=int, default=32)
+    train_parser.add_argument(
+        "--train_resampling",
+        type=str,
+        default="none",
+        choices=["none", "weighted", "balanced"],
+        help=(
+            "Resampling strategy for the training loader: "
+            "'none' shuffles normally, 'weighted' uses a WeightedRandomSampler, "
+            "'balanced' duplicates minority classes before shuffling."
+        ),
+    )
     train_parser.add_argument("--lr", type=float, default=1e-4)
     train_parser.add_argument("--weight_decay", type=float, default=1e-4)
     train_parser.add_argument("--num_workers", type=int, default=4)
@@ -1690,6 +1730,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             output_dir=args.output_dir,
             epochs=args.epochs,
             batch_size=args.batch_size,
+            train_resampling=args.train_resampling,
             lr=args.lr,
             weight_decay=args.weight_decay,
             num_workers=args.num_workers,

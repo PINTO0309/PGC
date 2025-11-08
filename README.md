@@ -91,7 +91,7 @@ Rows are stratified within each label before concatenation, so both splits keep 
 
 - Use the images located under `dataset/output/002_xxxx_front_yyyyyy` together with their annotations in `dataset/output/002_xxxx_front.csv`.
 - Every augmented image that originates from the same `still_image` stays in the same split to prevent leakage.
-- The training loop relies on `BCEWithLogitsLoss`, `pos_weight`, and a `WeightedRandomSampler` to stabilise optimisation under class imbalance; inference produces sigmoid probabilities.
+- The training loop relies on `BCEWithLogitsLoss` plus class-balanced `pos_weight` to stabilise optimisation under class imbalance; inference produces sigmoid probabilities. Use `--train_resampling weighted` to switch on the previous `WeightedRandomSampler` behaviour, or `--train_resampling balanced` to physically duplicate minority classes before shuffling.
 - Training history, validation metrics, optional test predictions, checkpoints, configuration JSON, and ONNX exports are produced automatically.
 - Per-epoch checkpoints named like `pgc_epoch_0001.pt` are retained (latest 10), as well as the best checkpoints named `pgc_best_epoch0004_f1_0.9321.pt` (also latest 10).
 - The backbone can be switched with `--arch_variant`. Supported combinations with `--head_variant` are:

@@ -1701,8 +1701,8 @@ def main():
 
             headpose_txt = BOX_COLORS[box.head_pose][1] if box.head_pose != -1 else ''
             attr_txt = f'{attr_txt} {headpose_txt}' if headpose_txt != '' else f'{attr_txt}'
-            if classid == 26 and box.hand_label:
-                attr_txt = box.hand_label
+            if classid == 26:
+                attr_txt = f'{box.hand_label} {box.score:.3f}' if box.hand_label else f'{box.score:.3f}'
 
             cv2.putText(
                 debug_image,

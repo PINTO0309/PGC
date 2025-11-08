@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import io
 import logging
+import math
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
+
+import math
 
 import pandas as pd
 import torch
@@ -249,3 +252,25 @@ def build_weighted_sampler(samples: Sequence[Sample]) -> WeightedRandomSampler:
     counts = Counter(labels)
     weights = [1.0 / counts[label] for label in labels]
     return WeightedRandomSampler(weights=weights, num_samples=len(weights), replacement=True)
+
+
+def oversample_samples(samples: Sequence[Sample], mode: str = "balanced") -> List[Sample]:
+    """Duplicate samples so each label reaches the largest class size."""
+
+    if mode not in {"balanced"}:
+        raise ValueError(f"Unsupported oversampling mode: {mode}")
+    if not samples:
+        return []
+
+    by_label: Dict[int, List[Sample]] = {}
+    for sample in samples:
+        by_label.setdefault(sample.label, []).append(sample)
+
+    max_count = max(len(bucket) for bucket in by_label.values())
+    oversampled: List[Sample] = []
+    for label in sorted(by_label):
+        bucket = by_label[label]
+        repeats = math.ceil(max_count / len(bucket))
+        tiled = (bucket * repeats)[:max_count]
+        oversampled.extend(tiled)
+    return oversampled
