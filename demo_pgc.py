@@ -1455,7 +1455,7 @@ def main():
                 continue
             box.hand_prob_pointing = prob_open
             box.hand_state = 1 if prob_open >= 0.50 else 0
-            state_text = 'Pointing!!' if box.hand_state == 1 else ''
+            state_text = '!! Pointing !!' if box.hand_state == 1 else ''
             box.hand_label = state_text
 
         if file_paths is None:
