@@ -86,15 +86,15 @@ class Color(Enum):
 CROP_SIZE_RULES = {
     'pointing': {
         'min_height': 5,
-        'max_height': 9999,
+        'max_height': 175,
         'min_width': 5,
-        'max_width': 9999,
+        'max_width': 125,
     },
     'not_pointing': {
         'min_height': 5,
-        'max_height': 9999,
+        'max_height': 175,
         'min_width': 5,
-        'max_width': 9999,
+        'max_width': 125,
     },
 }
 

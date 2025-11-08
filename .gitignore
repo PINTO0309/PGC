@@ -206,7 +206,7 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-data/cropped/
+data/cropped*/
 data/extracted/
 data/dataset.parquet
 real_data/
