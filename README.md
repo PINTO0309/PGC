@@ -45,13 +45,13 @@ uv run python 02_wholebody34_data_extractor.py \
 -ep tensorrt
 
 Hand-only detection summary
-  Total images: 596003
-  Images with detection: 583169
-  Images without detection: 12834
-  Images with >=2 detections: 37637
+  Total images: 600325
+  Images with detection: 587443
+  Images without detection: 12882
+  Images with >=2 detections: 37657
   Crops per label:
-    not_pointing: 371801
-    pointing: 234866
+    not_pointing: 333467
+    pointing: 204065
 ```
 
 <img width="800" alt="pointing_hand_size_hist" src="https://github.com/user-attachments/assets/1eac3f32-e497-4457-a394-9a6923bf558b" />
