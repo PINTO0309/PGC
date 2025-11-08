@@ -11,6 +11,10 @@ from typing import Dict, Iterable, List, Tuple
 
 import pandas as pd
 
+LABEL_BY_CLASS_ID = {
+    0: "not_pointing",
+    1: "pointing",
+}
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -99,11 +103,14 @@ def embed_image_bytes(df: pd.DataFrame, column_name: str = "image_bytes") -> pd.
 
 
 def infer_label(path_str: str, class_id: int) -> str:
+    mapped = LABEL_BY_CLASS_ID.get(class_id)
+    if mapped is not None:
+        return mapped
     stem = Path(path_str).stem.lower()
-    if "pointing" in stem:
-        return "pointing"
     if "not_pointing" in stem:
         return "not_pointing"
+    if "pointing" in stem:
+        return "pointing"
     return "pointing" if class_id == 1 else "not_pointing"
 
 
