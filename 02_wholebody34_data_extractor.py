@@ -1241,7 +1241,7 @@ def process_video_for_hand_analysis(
             if detection_count == 0:
                 continue
             base_name = f'{video_path.stem}_{frame_idx:08d}'
-            for det_idx, box in enumerate(hand_boxes[:2]):
+            for det_idx, box in enumerate(hand_boxes[:1]):
                 crop = crop_hand_region(frame, box)
                 if crop is None or crop.size == 0:
                     continue

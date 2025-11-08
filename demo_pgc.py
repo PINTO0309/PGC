@@ -862,8 +862,8 @@ class PGC(AbstractModel):
         resized_image = self._preprocess(image=image)
         inference_image = np.asarray([resized_image], dtype=self._input_dtypes[0])
         outputs = super().__call__(input_datas=[inference_image])
-        prob_open = float(np.squeeze(outputs[0]))
-        return float(np.clip(prob_open, 0.0, 1.0))
+        prob_pointing = float(np.squeeze(outputs[0]))
+        return float(np.clip(prob_pointing, 0.0, 1.0))
 
     def _preprocess(
         self,
@@ -1093,7 +1093,7 @@ def main():
         '--pgc_model',
         type=str,
         default='pgc_l.onnx',
-        help='ONNX file path for the PGC eye classifier.',
+        help='ONNX file path for the PGC hand classifier.',
     )
     group_v_or_i = parser.add_mutually_exclusive_group(required=True)
     group_v_or_i.add_argument(
@@ -1373,7 +1373,7 @@ def main():
         keypoint_th=keypoint_threshold,
         providers=providers,
     )
-    eye_classifier = PGC(
+    hand_classifier = PGC(
         runtime='onnx',
         model_path=pgc_model_file,
         providers=providers,
@@ -1438,7 +1438,7 @@ def main():
         for box in boxes:
             if box.classid != 26:
                 continue
-            eye_crop = crop_image_with_margin(
+            hand_crop = crop_image_with_margin(
                 image=image,
                 box=box,
                 margin_top=0,
@@ -1446,15 +1446,15 @@ def main():
                 margin_left=0,
                 margin_right=0,
             )
-            if eye_crop is None or eye_crop.size == 0:
+            if hand_crop is None or hand_crop.size == 0:
                 continue
-            rgb_eye_crop = cv2.cvtColor(eye_crop, cv2.COLOR_BGR2RGB)
+            rgb_hand_crop = cv2.cvtColor(hand_crop, cv2.COLOR_BGR2RGB)
             try:
-                prob_open = eye_classifier(image=rgb_eye_crop)
+                prob_pointing = hand_classifier(image=rgb_hand_crop)
             except Exception:
                 continue
-            box.hand_prob_pointing = prob_open
-            box.hand_state = 1 if prob_open >= 0.50 else 0
+            box.hand_prob_pointing = prob_pointing
+            box.hand_state = 1 if prob_pointing >= 0.50 else 0
             state_text = '!! Pointing !!' if box.hand_state == 1 else ''
             box.hand_label = state_text
 
