@@ -67,14 +67,14 @@ uv run python 03_dataset_convert_to_parquet.py \
 --embed-images
 
 Split summary: {
-  'train_total': 485332,
-  'train_not_pointing': 297440,
-  'train_pointing': 187892,
-  'val_total': 121335,
-  'val_not_pointing': 74361,
-  'val_pointing': 46974
+  'train_total': 430025,
+  'train_not_pointing': 263370,
+  'train_pointing': 166655,
+  'val_total': 107507,
+  'val_not_pointing': 65843,
+  'val_pointing': 41664
 }
-Saved dataset to data/dataset.parquet (606667 rows).
+Saved dataset to data/dataset.parquet (537532 rows).
 ```
 
 Generated parquet schema (`split`, `label`, `class_id`, `image_path`, `source`):
