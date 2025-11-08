@@ -832,7 +832,7 @@ class PGC(AbstractModel):
         self._input_height, self._input_width = self._resolve_input_size()
 
     def _resolve_input_size(self) -> Tuple[int, int]:
-        default_height, default_width = 30, 48
+        default_height, default_width = 32, 32
         input_shape: Optional[List[int]] = None
         if self._runtime == 'onnx':
             input_shape = list(self._interpreter.get_inputs()[0].shape)
@@ -1702,7 +1702,7 @@ def main():
             headpose_txt = BOX_COLORS[box.head_pose][1] if box.head_pose != -1 else ''
             attr_txt = f'{attr_txt} {headpose_txt}' if headpose_txt != '' else f'{attr_txt}'
             if classid == 26:
-                attr_txt = f'{box.hand_label} {box.score:.3f}' if box.hand_label else f'{box.score:.3f}'
+                attr_txt = f'{box.hand_label} {box.hand_prob_pointing:.3f}' if box.hand_label else f'{box.hand_prob_pointing:.3f}'
 
             cv2.putText(
                 debug_image,
