@@ -116,6 +116,7 @@ uv run python -m pgc train \
 --batch_size 256 \
 --train_ratio 0.8 \
 --val_ratio 0.2 \
+--train_resampling balanced \
 --image_size 32x32 \
 --base_channels 32 \
 --num_blocks 4 \
@@ -135,6 +136,7 @@ uv run python -m pgc train \
 --batch_size 256 \
 --train_ratio 0.8 \
 --val_ratio 0.2 \
+--train_resampling balanced \
 --image_size 32x32 \
 --base_channels 32 \
 --num_blocks 4 \
@@ -155,6 +157,7 @@ uv run python -m pgc train \
 --batch_size 256 \
 --train_ratio 0.8 \
 --val_ratio 0.2 \
+--train_resampling balanced \
 --image_size 32x32 \
 --base_channels 32 \
 --num_blocks 4 \
