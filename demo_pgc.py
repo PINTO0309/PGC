@@ -1455,8 +1455,7 @@ def main():
                 continue
             box.hand_prob_pointing = prob_pointing
             box.hand_state = 1 if prob_pointing >= 0.50 else 0
-            state_text = '!! Pointing !!' if box.hand_state == 1 else ''
-            box.hand_label = state_text
+            box.hand_label = '!! Pointing !!' if box.hand_state == 1 else ''
 
         if file_paths is None:
             cv2.putText(debug_image, f'{elapsed_time*1000:.2f} ms', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
