@@ -1454,7 +1454,7 @@ def main():
             except Exception:
                 continue
             box.hand_prob_pointing = prob_pointing
-            box.hand_state = 1 if prob_pointing >= 0.50 else 0
+            box.hand_state = 1 if prob_pointing >= 0.80 else 0
             box.hand_label = '!! Pointing !!' if box.hand_state == 1 else ''
 
         if file_paths is None:
