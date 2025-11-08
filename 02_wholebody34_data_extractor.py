@@ -1177,9 +1177,9 @@ def process_images_dir_for_hand_analysis(
         hand_boxes.sort(key=lambda box: box.score, reverse=True)
         detection_count = len(hand_boxes)
         tracker.register_image(detection_count)
-        if detection_count == 0:
+        if detection_count == 0 or detection_count >= 2:
             continue
-        for det_idx, box in enumerate(hand_boxes[:2]):
+        for det_idx, box in enumerate(hand_boxes[:1]):
             crop = crop_hand_region(image, box)
             if crop is None or crop.size == 0:
                 continue
@@ -1238,7 +1238,7 @@ def process_video_for_hand_analysis(
             hand_boxes.sort(key=lambda box: box.score, reverse=True)
             detection_count = len(hand_boxes)
             tracker.register_image(detection_count)
-            if detection_count == 0:
+            if detection_count == 0 or detection_count >= 2:
                 continue
             base_name = f'{video_path.stem}_{frame_idx:08d}'
             for det_idx, box in enumerate(hand_boxes[:1]):
