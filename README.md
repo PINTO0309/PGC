@@ -50,13 +50,13 @@ Hand-only detection summary
   Images without detection: 12834
   Images with >=2 detections: 37637
   Crops per label:
-    not_pointing: 381729
-    pointing: 239054
+    not_pointing: 371801
+    pointing: 234866
 ```
 
-<img width="800" alt="pointing_hand_size_hist" src="https://github.com/user-attachments/assets/e2b62a57-fed7-44a2-892b-543dea7487cf" />
+<img width="800" alt="pointing_hand_size_hist" src="https://github.com/user-attachments/assets/1eac3f32-e497-4457-a394-9a6923bf558b" />
 
-<img width="800" alt="not_pointing_hand_size_hist" src="https://github.com/user-attachments/assets/10bb9480-ba52-4805-ae8f-c206a1977e4b" />
+<img width="800" alt="not_pointing_hand_size_hist" src="https://github.com/user-attachments/assets/ac3ed8f4-e3f5-4ced-8199-9ac5b23f3f5c" />
 
 ```bash
 uv run python 03_dataset_convert_to_parquet.py \
