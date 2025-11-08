@@ -838,6 +838,36 @@ def list_image_files(dir_path: str) -> List[str]:
     return sorted([str(file) for file in image_files])
 
 
+def _is_subpath(path: Path, parent: Path) -> bool:
+    try:
+        path.resolve().relative_to(parent.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _next_real_data_folder_start(root: Path, default_start: int = 100000001) -> int:
+    """Determine the next folder index for real-data crops (folders starting with '1')."""
+    max_folder = default_start - 1
+    if not root.exists():
+        return default_start
+    for child in root.iterdir():
+        if not child.is_dir():
+            continue
+        name = child.name
+        if not name.isdigit():
+            continue
+        if not name.startswith('1'):
+            continue
+        value = int(name)
+        if value > max_folder:
+            max_folder = value
+    next_folder = max_folder + 1
+    if next_folder < default_start:
+        return default_start
+    return next_folder
+
+
 class CropIndexer:
     """Manage crop file numbering and folder rotation."""
 
@@ -904,32 +934,89 @@ class HandAnalysisTracker:
             self.widths_by_label[label_name].append(width_px)
         self.crops_per_label[label_name] += 1
 
-    def write_annotation_csv(self) -> None:
+    def write_annotation_csv(self, append_if_exists: bool = False) -> None:
         annotation_path = self.output_root / 'annotation.csv'
-        merged_entries: Dict[str, int] = {}
-        if annotation_path.exists():
-            with open(annotation_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    if ',' not in line:
-                        continue
-                    rel_path, classid_str = line.split(',', 1)
-                    rel_path = rel_path.strip()
-                    classid_str = classid_str.strip()
-                    try:
-                        merged_entries[rel_path] = int(classid_str)
-                    except ValueError:
-                        continue
-        for rel_path, classid in self.annotation_entries:
-            merged_entries[rel_path] = classid
-        sorted_entries = sorted(merged_entries.items(), key=lambda item: item[0])
-        with open(annotation_path, 'w', encoding='utf-8') as f:
-            for rel_path, classid in sorted_entries:
+        mode = 'a' if append_if_exists and annotation_path.exists() else 'w'
+        need_leading_newline = False
+        if mode == 'a':
+            try:
+                if annotation_path.stat().st_size > 0:
+                    with open(annotation_path, 'rb') as fb:
+                        fb.seek(-1, os.SEEK_END)
+                        last_char = fb.read(1)
+                        need_leading_newline = last_char not in (b'\n', b'\r')
+            except OSError:
+                need_leading_newline = False
+        with open(annotation_path, mode, encoding='utf-8') as f:
+            if need_leading_newline:
+                f.write('\n')
+            for rel_path, classid in self.annotation_entries:
                 f.write(f'{rel_path},{classid}\n')
 
+    def _load_existing_annotation_entries(self) -> Dict[str, int]:
+        annotation_path = self.output_root / 'annotation.csv'
+        entries: Dict[str, int] = {}
+        if not annotation_path.exists():
+            return entries
+        with open(annotation_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or ',' not in line:
+                    continue
+                rel_path, classid_str = line.split(',', 1)
+                rel_path = rel_path.strip()
+                classid_str = classid_str.strip()
+                try:
+                    entries[rel_path] = int(classid_str)
+                except ValueError:
+                    continue
+        return entries
+
+    def _rebuild_histogram_data_from_existing(self) -> bool:
+        existing_entries = self._load_existing_annotation_entries()
+        for rel_path, classid in self.annotation_entries:
+            existing_entries[rel_path] = classid
+
+        if not existing_entries:
+            return False
+
+        print(Color.GREEN('Rebuilding histogram statistics from existing crops (0*/1* folders).'))
+        heights: Dict[str, List[int]] = defaultdict(list)
+        widths: Dict[str, List[int]] = defaultdict(list)
+        processed = 0
+        for rel_path, classid in existing_entries.items():
+            rel_path_obj = Path(rel_path)
+            parent_name = rel_path_obj.parent.name if rel_path_obj.parent != rel_path_obj else ''
+            if not parent_name or parent_name[0] not in {'0', '1'}:
+                continue
+            crop_path = rel_path_obj
+            if not crop_path.exists():
+                continue
+            image = cv2.imread(str(crop_path), cv2.IMREAD_UNCHANGED)
+            if image is None or image.size == 0:
+                continue
+            h, w = image.shape[:2]
+            label_name = 'pointing' if int(classid) == 1 else 'not_pointing'
+            heights[label_name].append(h)
+            widths[label_name].append(w)
+            processed += 1
+
+        if processed == 0:
+            return False
+
+        self.heights_by_label = heights
+        self.widths_by_label = widths
+        return True
+
     def write_histograms(self) -> None:
+        hist_targets = [
+            self.output_root / 'pointing_hand_size_hist.png',
+            self.output_root / 'not_pointing_hand_size_hist.png',
+        ]
+        if any(target.exists() for target in hist_targets):
+            rebuilt = self._rebuild_histogram_data_from_existing()
+            if not rebuilt:
+                print(Color.YELLOW('Unable to rebuild histograms from existing crops; falling back to current session data.'))
         for label_name in sorted(set(self.heights_by_label.keys()) | set(self.widths_by_label.keys())):
             heights = self.heights_by_label.get(label_name, [])
             widths = self.widths_by_label.get(label_name, [])
@@ -1087,7 +1174,14 @@ def run_hand_analysis(
     output_root = Path('data') / 'cropped'
     tracker = HandAnalysisTracker(output_root=output_root)
     dataset_crop_indexer = CropIndexer(root=tracker.output_root, start_folder=1)
-    video_crop_indexer = CropIndexer(root=tracker.output_root, start_folder=100000001)
+    real_data_dir = Path('data') / 'real_data'
+    has_real_data_source = any(_is_subpath(path, real_data_dir) for path in video_paths)
+    video_start_folder = (
+        _next_real_data_folder_start(tracker.output_root)
+        if has_real_data_source
+        else 100000001
+    )
+    video_crop_indexer = CropIndexer(root=tracker.output_root, start_folder=video_start_folder)
 
     processed_any = False
     for images_dir, label_hint in image_dirs:
@@ -1130,7 +1224,7 @@ def run_hand_analysis(
         return
 
     tracker.write_histograms()
-    tracker.write_annotation_csv()
+    tracker.write_annotation_csv(append_if_exists=True)
     tracker.print_summary()
 
 
