@@ -3,7 +3,41 @@ Ultrafast pointing gesture classification. Classify whether the finger is pointi
 
 https://github.com/user-attachments/assets/19268cf9-767c-441e-abc0-c3abd8dba57a
 
-## Dataset
+|Variant|Size|F1|CPU<br>inference<br>latency|ONNX|
+|:-:|:-:|:-:|:-:|:-:|
+|P|112 KB|||[Download]()|
+|N|176 KB|||[Download]()|
+|S|494 KB|0.9524|0.43 ms|[Download]()|
+|C|875 KB|||[Download]()|
+|M|1.7 MB|||[Download]()|
+|L|6.4 MB|0.9782|0.78 ms|[Download]()|
+
+## Setup
+
+```bash
+git clone https://github.com/PINTO0309/PGC.git && cd PGC
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync
+source .venv/bin/activate
+```
+
+## Inference
+
+```bash
+uv run python demo_pgc.py \
+-pm pgc_l_32x32.onnx \
+-v 0 \
+-ep cuda \
+-dlr
+
+uv run python demo_pgc.py \
+-pm pgc_l_32x32.onnx \
+-v 0 \
+-ep tensorrt \
+-dlr
+```
+
+## Dataset Preparation
 
 https://gibranbenitez.github.io/IPN_Hand/ CC BY 4.0
 
@@ -23,15 +57,6 @@ https://gibranbenitez.github.io/IPN_Hand/ CC BY 4.0
 |12|G09|Double click with two fingers|200|
 |13|G10|Zoom in|200|
 |14|G11|Zoom out|200|
-
-## Setup
-
-```bash
-git clone https://github.com/PINTO0309/PGC.git && cd PGC
-curl -LsSf https://astral.sh/uv/install.sh | sh
-uv sync
-source .venv/bin/activate
-```
 
 ```bash
 uv run python 01_prepare_pointing_dataset.py
