@@ -13,12 +13,14 @@ from pprint import pprint
 import numpy as np
 from enum import Enum
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from argparse import ArgumentParser, ArgumentTypeError
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Tuple, Optional, List, Dict, Any, Deque
 import importlib.util
-from collections import Counter
+from collections import Counter, deque
 from abc import ABC, abstractmethod
+
+from bbalg.main import state_verdict
 
 AVERAGE_HEAD_WIDTH: float = 0.16 + 0.10 # 16cm + Margin Compensation
 
@@ -46,6 +48,10 @@ EDGES = [
     (30, 31), (30, 31),  # hip_joint -> knee (left and right)
     (31, 32), (31, 32),  # knee -> ankle (left and right)
 ]
+
+HAND_LONG_HISTORY_SIZE = 6
+HAND_SHORT_HISTORY_SIZE = 4
+POINTING_LABEL = '!! Pointing !!'
 
 class Color(Enum):
     BLACK          = '\033[30m'
@@ -98,6 +104,19 @@ class Box():
     hand_prob_pointing: float = -1.0
     hand_state: int = -1  # -1: Unknown, 0: not_pointing, 1: pointing
     hand_label: str = ''
+
+
+@dataclass
+class HandStateHistory:
+    long_history: Deque[bool] = field(default_factory=lambda: deque(maxlen=HAND_LONG_HISTORY_SIZE))
+    short_history: Deque[bool] = field(default_factory=lambda: deque(maxlen=HAND_SHORT_HISTORY_SIZE))
+    label: str = ''
+    interval_active: bool = False
+
+    def append(self, state: bool) -> None:
+        """Push latest per-frame boolean into both buffers."""
+        self.long_history.append(state)
+        self.short_history.append(state)
 
 class SimpleSortTracker:
     """Minimal SORT-style tracker based on IoU matching."""
@@ -1406,7 +1425,9 @@ def main():
     white_line_width = bounding_box_line_width
     colored_line_width = white_line_width - 1
     tracker = SimpleSortTracker()
+    hand_tracker = SimpleSortTracker()
     track_color_cache: Dict[int, np.ndarray] = {}
+    hand_state_histories: Dict[int, HandStateHistory] = {}
     tracking_enabled_prev = enable_tracking
     while True:
         image: np.ndarray = None
@@ -1454,8 +1475,62 @@ def main():
             except Exception:
                 continue
             box.hand_prob_pointing = prob_pointing
-            box.hand_state = 1 if prob_pointing >= 0.80 else 0
-            box.hand_label = '!! Pointing !!' if box.hand_state == 1 else ''
+            box.hand_state = 1 if prob_pointing >= 0.50 else 0
+
+        hand_boxes = [box for box in boxes if box.classid == 26]
+        hand_tracker.update(hand_boxes)
+        matched_hand_track_ids: set[int] = set()
+        for hand_box in hand_boxes:
+            if hand_box.track_id <= 0:
+                continue
+            matched_hand_track_ids.add(hand_box.track_id)
+            history = hand_state_histories.get(hand_box.track_id)
+            if history is None:
+                history = HandStateHistory()
+                hand_state_histories[hand_box.track_id] = history
+            detection_state = bool(hand_box.hand_state == 1)
+            history.append(detection_state)
+            (
+                state_interval_judgment,
+                state_start_judgment,
+                state_end_judgment,
+            ) = state_verdict(
+                long_tracking_history=history.long_history,
+                short_tracking_history=history.short_history,
+            )
+            history.interval_active = state_interval_judgment
+            if state_start_judgment or state_interval_judgment:
+                history.label = POINTING_LABEL
+            elif state_end_judgment:
+                history.label = ''
+            hand_box.hand_label = history.label
+            hand_box.hand_state = 1 if history.interval_active else 0
+
+        current_hand_track_ids = {track['id'] for track in hand_tracker.tracks}
+        unmatched_hand_track_ids = current_hand_track_ids - matched_hand_track_ids
+        for track_id in unmatched_hand_track_ids:
+            history = hand_state_histories.get(track_id)
+            if history is None:
+                history = HandStateHistory()
+                hand_state_histories[track_id] = history
+            history.append(False)
+            (
+                state_interval_judgment,
+                state_start_judgment,
+                state_end_judgment,
+            ) = state_verdict(
+                long_tracking_history=history.long_history,
+                short_tracking_history=history.short_history,
+            )
+            history.interval_active = state_interval_judgment
+            if state_start_judgment or state_interval_judgment:
+                history.label = POINTING_LABEL
+            elif state_end_judgment:
+                history.label = ''
+
+        stale_history_ids = [track_id for track_id in list(hand_state_histories.keys()) if track_id not in current_hand_track_ids]
+        for track_id in stale_history_ids:
+            hand_state_histories.pop(track_id, None)
 
         if file_paths is None:
             cv2.putText(debug_image, f'{elapsed_time*1000:.2f} ms', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
