@@ -13,7 +13,7 @@ from pprint import pprint
 import numpy as np
 from enum import Enum
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from argparse import ArgumentParser, ArgumentTypeError
 from typing import Tuple, Optional, List, Dict, Any, Deque
 import importlib.util
@@ -106,12 +106,12 @@ class Box():
     hand_label: str = ''
 
 
-@dataclass
 class HandStateHistory:
-    long_history: Deque[bool] = field(default_factory=lambda: deque(maxlen=HAND_LONG_HISTORY_SIZE))
-    short_history: Deque[bool] = field(default_factory=lambda: deque(maxlen=HAND_SHORT_HISTORY_SIZE))
-    label: str = ''
-    interval_active: bool = False
+    def __init__(self, long_size: int, short_size: int) -> None:
+        self.long_history: Deque[bool] = deque(maxlen=long_size)
+        self.short_history: Deque[bool] = deque(maxlen=short_size)
+        self.label: str = ''
+        self.interval_active: bool = False
 
     def append(self, state: bool) -> None:
         """Push latest per-frame boolean into both buffers."""
@@ -1186,6 +1186,22 @@ def main():
             'The keypoint score threshold for object detection. Default: 0.30',
     )
     parser.add_argument(
+        '--hand-long-history-size',
+        dest='hand_long_history_size',
+        type=check_positive,
+        default=HAND_LONG_HISTORY_SIZE,
+        help=\
+            f'History length N for bbalg long tracking buffer. Default: {HAND_LONG_HISTORY_SIZE}',
+    )
+    parser.add_argument(
+        '--hand-short-history-size',
+        dest='hand_short_history_size',
+        type=check_positive,
+        default=HAND_SHORT_HISTORY_SIZE,
+        help=\
+            f'History length M for bbalg short tracking buffer. Default: {HAND_SHORT_HISTORY_SIZE}',
+    )
+    parser.add_argument(
         '-kdm',
         '--keypoint_drawing_mode',
         type=str,
@@ -1289,6 +1305,8 @@ def main():
             'Camera horizontal FOV. Default: 90',
     )
     args = parser.parse_args()
+    hand_long_history_size = args.hand_long_history_size
+    hand_short_history_size = args.hand_short_history_size
 
     # runtime check
     model_file: str = args.model
@@ -1428,6 +1446,12 @@ def main():
     hand_tracker = SimpleSortTracker()
     track_color_cache: Dict[int, np.ndarray] = {}
     hand_state_histories: Dict[int, HandStateHistory] = {}
+    def get_hand_history(track_id: int) -> HandStateHistory:
+        history = hand_state_histories.get(track_id)
+        if history is None:
+            history = HandStateHistory(hand_long_history_size, hand_short_history_size)
+            hand_state_histories[track_id] = history
+        return history
     tracking_enabled_prev = enable_tracking
     while True:
         image: np.ndarray = None
@@ -1484,10 +1508,7 @@ def main():
             if hand_box.track_id <= 0:
                 continue
             matched_hand_track_ids.add(hand_box.track_id)
-            history = hand_state_histories.get(hand_box.track_id)
-            if history is None:
-                history = HandStateHistory()
-                hand_state_histories[hand_box.track_id] = history
+            history = get_hand_history(hand_box.track_id)
             detection_state = bool(hand_box.hand_state == 1)
             history.append(detection_state)
             (
@@ -1509,10 +1530,7 @@ def main():
         current_hand_track_ids = {track['id'] for track in hand_tracker.tracks}
         unmatched_hand_track_ids = current_hand_track_ids - matched_hand_track_ids
         for track_id in unmatched_hand_track_ids:
-            history = hand_state_histories.get(track_id)
-            if history is None:
-                history = HandStateHistory()
-                hand_state_histories[track_id] = history
+            history = get_hand_history(track_id)
             history.append(False)
             (
                 state_interval_judgment,
