@@ -219,7 +219,7 @@ uv run python -m pgc exportonnx \
 - After exporting, the tool runs `onnxsim` for simplification and rewrites any remaining BatchNormalization nodes into affine `Mul`/`Add` primitives. If simplification fails, a warning is emitted and the unsimplified model is preserved.
 
 ## Acknowledgements
-- https://gibranbenitez.github.io/IPN_Hand/: CC BY 4.0
+- https://gibranbenitez.github.io/IPN_Hand/: CC BY 4.0 License
   ```bibtex
   @inproceedings{bega2020IPNhand,
     title={IPN Hand: A Video Dataset and Benchmark for Real-Time Continuous Hand Gesture Recognition},
@@ -230,4 +230,5 @@ uv run python -m pgc exportonnx \
     organization={IEEE}
   }
   ```
-- https://github.com/PINTO0309/PINTO_model_zoo/tree/main/472_DEIMv2-Wholebody34 - Apache 2.0
+- https://github.com/PINTO0309/PINTO_model_zoo/tree/main/472_DEIMv2-Wholebody34: Apache 2.0 License
+- https://github.com/PINTO0309/bbalg: MIT License
