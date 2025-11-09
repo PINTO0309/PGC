@@ -96,6 +96,15 @@ wheels = [
 ]
 
 [[package]]
+name = "bbalg"
+version = "1.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/e4/a15dd0b717085121cf9cb1aa0d5011e9cf1d2db66fea4c059f2c9cd05644/bbalg-1.0.2.tar.gz", hash = "sha256:7b80b5a59ea144a5729c52d2beccd1faf8e083545f717b2e6ba8c8000d06bb92", size = 4518, upload-time = "2024-01-15T16:31:45.289Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/da/12b7627faedeb8fb91eead6b04277e8fadb58d27043f38e3de20f235b3aa/bbalg-1.0.2-py3-none-any.whl", hash = "sha256:08d7f8125ce1a1f1e81b14e8f6f3280ca9c15800fa639e53bb26d89b4157d42a", size = 5304, upload-time = "2024-01-15T16:31:44.036Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2025.10.5"
 source = { registry = "https://pypi.org/simple" }
@@ -843,6 +852,7 @@ name = "pgc"
 version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "bbalg" },
     { name = "datasets" },
     { name = "huggingface-hub" },
     { name = "matplotlib" },
@@ -863,6 +873,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "bbalg", specifier = "==1.0.2" },
     { name = "datasets", specifier = "==4.3.0" },
     { name = "huggingface-hub", specifier = "==1.0.1" },
     { name = "matplotlib", specifier = "==3.10.7" },
