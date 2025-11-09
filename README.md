@@ -1,5 +1,5 @@
 # PGC
-Pointing gesture classification.
+Ultrafast pointing gesture classification. Classify whether the finger is pointing near the center of the camera lens.
 
 https://github.com/user-attachments/assets/19268cf9-767c-441e-abc0-c3abd8dba57a
 
