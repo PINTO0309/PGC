@@ -222,7 +222,7 @@ uv run python -m pgc exportonnx \
 
 ## Arch
 
-<img width="300" alt="ocec_p" src="https://github.com/user-attachments/assets/fa54cf38-0fd4-487a-bf9e-dfbc5401a389" />
+<img width="300" alt="pgc_s_32x32" src="https://github.com/user-attachments/assets/f6a6efcc-0b05-4cbe-b578-1c72312c1b61" />
 
 ## Citation
 
