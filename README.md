@@ -1,7 +1,7 @@
 # PGC
 Ultrafast pointing gesture classification. Classify whether the finger is pointing near the center of the camera lens.
 
-A model that can only detect slow human gestures is completely worthless. A resolution of 32x32 is sufficient for human hand gesture classification.
+A model that can only detect slow human gestures is completely worthless. A resolution of 32x32 is sufficient for human hand gesture classification. LSTM and 3DCNN are useless because they are not robust to environmental noise.
 
 https://github.com/user-attachments/assets/19268cf9-767c-441e-abc0-c3abd8dba57a
 
