@@ -193,7 +193,7 @@ uv run python -m pgc train \
 --num_blocks 4 \
 --arch_variant convnext \
 --head_variant transformer \
---token_mixer_grid 3x2 \
+--token_mixer_grid 2x2 \
 --seed 42 \
 --device auto \
 --use_amp
