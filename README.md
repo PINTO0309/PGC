@@ -1,6 +1,8 @@
 # PGC
 Ultrafast pointing gesture classification. Classify whether the finger is pointing near the center of the camera lens.
 
+Being able to detect slow human gestures is simply not worth it.
+
 https://github.com/user-attachments/assets/19268cf9-767c-441e-abc0-c3abd8dba57a
 
 |Variant|Size|F1|CPU<br>inference<br>latency|ONNX|
