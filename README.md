@@ -1,6 +1,10 @@
 # PGC
 Pointing gesture classification.
 
+https://github.com/user-attachments/assets/19268cf9-767c-441e-abc0-c3abd8dba57a
+
+## Dataset
+
 https://gibranbenitez.github.io/IPN_Hand/ CC BY 4.0
 
 |id|Label|Gesture|Instances|
@@ -19,7 +23,6 @@ https://gibranbenitez.github.io/IPN_Hand/ CC BY 4.0
 |12|G09|Double click with two fingers|200|
 |13|G10|Zoom in|200|
 |14|G11|Zoom out|200|
-
 
 ## Setup
 
@@ -189,3 +192,17 @@ uv run python -m pgc exportonnx \
 
 - The saved graph exposes `images` as input and `prob_pointing` as output (batch dimension is dynamic); probabilities can be consumed directly.
 - After exporting, the tool runs `onnxsim` for simplification and rewrites any remaining BatchNormalization nodes into affine `Mul`/`Add` primitives. If simplification fails, a warning is emitted and the unsimplified model is preserved.
+
+## Acknowledgements
+- https://gibranbenitez.github.io/IPN_Hand/: CC BY 4.0
+  ```bibtex
+  @inproceedings{bega2020IPNhand,
+    title={IPN Hand: A Video Dataset and Benchmark for Real-Time Continuous Hand Gesture Recognition},
+    author={Benitez-Garcia, Gibran and Olivares-Mercado, Jesus and Sanchez-Perez, Gabriel and Yanai, Keiji},
+    booktitle={25th International Conference on Pattern Recognition, {ICPR 2020}, Milan, Italy, Jan 10--15, 2021},
+    pages={4340--4347},
+    year={2021},
+    organization={IEEE}
+  }
+  ```
+- https://github.com/PINTO0309/PINTO_model_zoo/tree/main/472_DEIMv2-Wholebody34 - Apache 2.0
