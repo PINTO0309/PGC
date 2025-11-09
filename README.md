@@ -1,4 +1,6 @@
 # PGC
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17564899.svg)](https://doi.org/10.5281/zenodo.17564899) ![GitHub License](https://img.shields.io/github/license/pinto0309/pgc) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/PINTO0309/pgc)
+
 Ultrafast pointing gesture classification. Classify whether the finger is pointing near the center of the camera lens.
 
 A model that can only detect slow human gestures is completely worthless. A resolution of 32x32 is sufficient for human hand gesture classification. LSTM and 3DCNN are useless because they are not robust to environmental noise.
@@ -233,7 +235,7 @@ If you find this project useful, please consider citing:
   month     = {11},
   year      = {2025},
   publisher = {Zenodo},
-  doi       = {10.5281/zenodo.17505461},
+  doi       = {10.5281/zenodo.17564899},
   url       = {https://github.com/PINTO0309/pgc},
   abstract  = {Ultrafast pointing gesture classification.},
 }
