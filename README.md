@@ -7,10 +7,10 @@ https://github.com/user-attachments/assets/19268cf9-767c-441e-abc0-c3abd8dba57a
 
 |Variant|Size|F1|CPU<br>inference<br>latency|ONNX|
 |:-:|:-:|:-:|:-:|:-:|
-|S|494 KB|0.9524|0.43 ms|[Download]()|
-|C|875 KB|0.9626|0.50 ms|[Download]()|
-|M|1.7 MB|0.9714|0.59 ms|[Download]()|
-|L|6.4 MB|0.9782|0.78 ms|[Download]()|
+|S|494 KB|0.9524|0.43 ms|[Download](https://github.com/PINTO0309/PGC/releases/download/onnx/pgc_s_32x32.onnx)|
+|C|875 KB|0.9626|0.50 ms|[Download](https://github.com/PINTO0309/PGC/releases/download/onnx/pgc_c_32x32.onnx)|
+|M|1.7 MB|0.9714|0.59 ms|[Download](https://github.com/PINTO0309/PGC/releases/download/onnx/pgc_m_32x32.onnx)|
+|L|6.4 MB|0.9782|0.78 ms|[Download](https://github.com/PINTO0309/PGC/releases/download/onnx/pgc_l_32x32.onnx)|
 
 ## Setup
 
