@@ -112,6 +112,11 @@ Model prob_pointing=1.0000
   - Negative or near-zero deltas imply the network barely uses that tensor for the sampled images, hinting at redundancy or opportunities for pruning.
 - By default the top 6 tensors (highest mean Δ) are auto-visualised via `10_visualize_pgc_heatmaps.py` using the first processed crop; their heatmaps plus a 3×2 collage (filled column-by-column so the most influential maps occupy the left column) land under `ablation_heatmaps/`. Override or disable this behaviour with `--topk-heatmaps 0`, `--topk-image`, or `--topk-output-dir`.
 
+  |Label|Heatmaps|
+  |:-:|:-:|
+  |`not_pointing`|<img width="700" alt="ablation_top_features" src="https://github.com/user-attachments/assets/0b24c1dc-3ba1-44a8-817b-d894a7b0f361" />|
+  |`pointing`|<img width="700" alt="ablation_top_features" src="https://github.com/user-attachments/assets/bdf1fff9-5cad-4b51-8fff-553e0b23da7b" />|
+
 ## Dataset Preparation
 
 https://gibranbenitez.github.io/IPN_Hand/ CC BY 4.0
