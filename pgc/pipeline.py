@@ -337,6 +337,8 @@ class TrainConfig:
     token_mixer_grid: tuple[int, int] = (2, 3)
     token_mixer_layers: int = 2
     rgb_to_yuv_to_y: bool = False
+    rgb_to_lab: bool = False
+    rgb_to_luv: bool = False
     device: str = "auto"
     resume_from: Optional[Path] = None
     use_amp: bool = False
@@ -834,6 +836,8 @@ def train_pipeline(config: TrainConfig, verbose: bool = False) -> Dict[str, Any]
         token_mixer_grid=config.token_mixer_grid,
         token_mixer_layers=config.token_mixer_layers,
         rgb_to_yuv_to_y=config.rgb_to_yuv_to_y,
+        rgb_to_lab=config.rgb_to_lab,
+        rgb_to_luv=config.rgb_to_luv,
     )
     model = PGC(model_config).to(device)
     base_metadata = {
@@ -1646,6 +1650,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Convert RGB inputs to YUV and keep only the Y (luma) channel inside the model.",
     )
     train_parser.add_argument(
+        "--rgb_to_lab",
+        action="store_true",
+        help="Convert RGB inputs to CIE Lab (3-channel) inside the model.",
+    )
+    train_parser.add_argument(
+        "--rgb_to_luv",
+        action="store_true",
+        help="Convert RGB inputs to CIE Luv (3-channel) inside the model.",
+    )
+    train_parser.add_argument(
         "--token_mixer_grid",
         type=_parse_token_mixer_grid_arg,
         default=(2, 3),
@@ -1732,6 +1746,16 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     args = parser.parse_args(argv)
 
     if args.command == "train":
+        color_flags = {
+            "--rgb_to_yuv_to_y": getattr(args, "rgb_to_yuv_to_y", False),
+            "--rgb_to_lab": getattr(args, "rgb_to_lab", False),
+            "--rgb_to_luv": getattr(args, "rgb_to_luv", False),
+        }
+        active_flags = [name for name, enabled in color_flags.items() if enabled]
+        if len(active_flags) > 1:
+            parser.error(
+                f"Color-space options {', '.join(active_flags)} are mutually exclusive; please select at most one."
+            )
         config = TrainConfig(
             data_root=args.data_root,
             output_dir=args.output_dir,
@@ -1754,6 +1778,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             token_mixer_grid=args.token_mixer_grid,
             token_mixer_layers=args.token_mixer_layers,
             rgb_to_yuv_to_y=args.rgb_to_yuv_to_y,
+            rgb_to_lab=args.rgb_to_lab,
+            rgb_to_luv=args.rgb_to_luv,
             device=args.device,
             resume_from=args.resume,
             use_amp=args.use_amp,

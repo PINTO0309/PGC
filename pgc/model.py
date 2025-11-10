@@ -22,6 +22,44 @@ class ModelConfig:
     token_mixer_grid: tuple[int, int] = (2, 3)
     token_mixer_layers: int = 2
     rgb_to_yuv_to_y: bool = False
+    rgb_to_lab: bool = False
+    rgb_to_luv: bool = False
+
+
+_RGB_TO_XYZ = torch.tensor(
+    [
+        [0.4124564, 0.3575761, 0.1804375],
+        [0.2126729, 0.7151522, 0.0721750],
+        [0.0193339, 0.1191920, 0.9503041],
+    ],
+    dtype=torch.float32,
+)
+_D65_WHITE_POINT = torch.tensor([0.95047, 1.0, 1.08883], dtype=torch.float32)
+_LAB_EPSILON = 216.0 / 24389.0
+_LAB_KAPPA = 24389.0 / 27.0
+
+
+def _srgb_to_linear(rgb: torch.Tensor) -> torch.Tensor:
+    rgb = torch.clamp(rgb, 0.0, 1.0)
+    threshold = 0.04045
+    below = rgb <= threshold
+    low = rgb / 12.92
+    high = torch.pow((rgb + 0.055) / 1.055, 2.4)
+    return torch.where(below, low, high)
+
+
+def _linear_rgb_to_xyz(rgb: torch.Tensor, matrix: torch.Tensor) -> torch.Tensor:
+    if rgb.shape[1] != 3:
+        raise ValueError("RGB tensor must have 3 channels.")
+    mat = matrix.to(device=rgb.device, dtype=rgb.dtype)
+    r = rgb[:, 0:1]
+    g = rgb[:, 1:2]
+    b = rgb[:, 2:3]
+    x = mat[0, 0] * r + mat[0, 1] * g + mat[0, 2] * b
+    y = mat[1, 0] * r + mat[1, 1] * g + mat[1, 2] * b
+    z = mat[2, 0] * r + mat[2, 1] * g + mat[2, 2] * b
+    xyz = torch.cat([x, y, z], dim=1)
+    return torch.clamp(xyz, min=0.0)
 
 
 class _RgbToY(nn.Module):
@@ -37,6 +75,67 @@ class _RgbToY(nn.Module):
         if coeffs.dtype != x.dtype:
             coeffs = coeffs.to(dtype=x.dtype)
         return (x * coeffs).sum(dim=1, keepdim=True)
+
+
+class _RgbToLab(nn.Module):
+    """Convert sRGB to CIE Lab color space."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.register_buffer("rgb_to_xyz", _RGB_TO_XYZ.clone(), persistent=False)
+        self.register_buffer("white_point", _D65_WHITE_POINT.view(1, 3, 1, 1).clone(), persistent=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        linear = _srgb_to_linear(x)
+        xyz = _linear_rgb_to_xyz(linear, self.rgb_to_xyz)
+        white = self.white_point.to(device=xyz.device, dtype=xyz.dtype)
+        xyz_norm = xyz / white
+        f = torch.where(
+            xyz_norm > _LAB_EPSILON,
+            torch.pow(xyz_norm, 1.0 / 3.0),
+            (xyz_norm * _LAB_KAPPA + 16.0) / 116.0,
+        )
+        fx, fy, fz = f[:, 0:1], f[:, 1:2], f[:, 2:3]
+        L = 116.0 * fy - 16.0
+        a = 500.0 * (fx - fy)
+        b = 200.0 * (fy - fz)
+        return torch.cat([L, a, b], dim=1)
+
+
+class _RgbToLuv(nn.Module):
+    """Convert sRGB to CIE Luv color space."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.register_buffer("rgb_to_xyz", _RGB_TO_XYZ.clone(), persistent=False)
+        self.register_buffer("white_point", _D65_WHITE_POINT.view(1, 3, 1, 1).clone(), persistent=False)
+        wp = _D65_WHITE_POINT
+        denom = wp[0] + 15.0 * wp[1] + 3.0 * wp[2]
+        uv_ref = torch.tensor(
+            [4.0 * wp[0] / denom, 9.0 * wp[1] / denom],
+            dtype=torch.float32,
+        )
+        self.register_buffer("uv_reference", uv_ref.view(2), persistent=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        linear = _srgb_to_linear(x)
+        xyz = _linear_rgb_to_xyz(linear, self.rgb_to_xyz)
+        white = self.white_point.to(device=xyz.device, dtype=xyz.dtype)
+        yr = xyz[:, 1:2] / white[:, 1:2]
+        L = torch.where(
+            yr > _LAB_EPSILON,
+            116.0 * torch.pow(yr, 1.0 / 3.0) - 16.0,
+            _LAB_KAPPA * yr,
+        )
+        denom = xyz[:, 0:1] + 15.0 * xyz[:, 1:2] + 3.0 * xyz[:, 2:3] + 1e-12
+        u_prime = (4.0 * xyz[:, 0:1]) / denom
+        v_prime = (9.0 * xyz[:, 1:2]) / denom
+        uv_ref = self.uv_reference.to(device=xyz.device, dtype=xyz.dtype).view(1, 2, 1, 1)
+        u_ref = uv_ref[:, 0:1]
+        v_ref = uv_ref[:, 1:2]
+        u = 13.0 * L * (u_prime - u_ref)
+        v = 13.0 * L * (v_prime - v_ref)
+        return torch.cat([L, u, v], dim=1)
 
 
 class _SepConvBlock(nn.Module):
@@ -348,7 +447,14 @@ class PGC(nn.Module):
         base = self.config.base_channels
         num_blocks = max(1, self.config.num_blocks)
         self._use_luma_input = bool(getattr(self.config, "rgb_to_yuv_to_y", False))
+        self._use_lab_input = bool(getattr(self.config, "rgb_to_lab", False))
+        self._use_luv_input = bool(getattr(self.config, "rgb_to_luv", False))
+        active_transforms = int(self._use_luma_input) + int(self._use_lab_input) + int(self._use_luv_input)
+        if active_transforms > 1:
+            raise ValueError("Only one of rgb_to_yuv_to_y, rgb_to_lab, or rgb_to_luv can be enabled at a time.")
         self._rgb_to_y = _RgbToY() if self._use_luma_input else None
+        self._rgb_to_lab = _RgbToLab() if self._use_lab_input else None
+        self._rgb_to_luv = _RgbToLuv() if self._use_luv_input else None
         input_channels = 1 if self._use_luma_input else 3
         variant = (self.config.arch_variant or "baseline").lower()
         head_variant = getattr(self.config, "head_variant", "auto")
@@ -431,6 +537,10 @@ class PGC(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self._rgb_to_y is not None:
             x = self._rgb_to_y(x)
+        elif self._rgb_to_lab is not None:
+            x = self._rgb_to_lab(x)
+        elif self._rgb_to_luv is not None:
+            x = self._rgb_to_luv(x)
         x = self.stem(x)
         x = self.features(x)
         if self._head_variant in {"transformer", "mlp_mixer"}:
