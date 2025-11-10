@@ -39,6 +39,79 @@ uv run python demo_pgc.py \
 -dlr
 ```
 
+## Feature Introspection
+
+### Heatmap Visualization (`10_visualize_pgc_heatmaps.py`)
+
+```bash
+uv run python 10_visualize_pgc_heatmaps.py \
+--model pgc_l_32x32.onnx \
+--image data/cropped/100000011/pointing1_00005922_1.png \
+--output-dir feature_heatmaps_pointing
+```
+
+- The script clones the ONNX graph in memory, taps every Sigmoid→Mul activation, and runs a single forward pass for the specified image (32×32 RGB crops are expected; non-32 inputs are resized automatically).
+- Each tapped tensor is reduced to a 2-D attention map (default channel mean), coloured with the `turbo` colormap, overlaid on the original crop, and written to `feature_heatmaps_pointing/00X_<layer>.png`.
+- Saved PNGs include three panels (original/heatmap/overlay) and are post-resized to 30 % of the Matplotlib canvas, so the folder is easy to scan even with dozens of layers.
+- Interpretation tips:
+- Use `--invert-cmap` if you prefer bright colours for strong activations; by default the original (non-inverted) palette is used.
+  - Brighter regions in the heatmap panel highlight where that block focuses after the Sigmoid gating.
+  - Comparing overlays across layers shows how spatial focus sharpens as the network goes deeper; early layers may track the palm outline, while later ones tend to lock onto fingertips.
+  - Use `--layers features.4` or `--limit 8` to focus on specific blocks, and re-run with other crops (e.g., negatives) to understand false positives.
+  - Supply `--composite-topk 6` to auto-create a 3×2 collage (row- or column-major via `--composite-layout`) and choose between intensity-sorted or user-defined ordering with `--composite-sort`; the combined PNG includes a legend bar that maps colour to “Low/High impact.”
+
+### Feature Ablation Statistics (`11_ablate_pgc_features.py`)
+
+```bash
+uv run python 11_ablate_pgc_features.py \
+--model pgc_l_32x32.onnx \
+--image-dir data/cropped/100000007 \
+--max-images 1000
+```
+```
+[IMAGE 0001] data/cropped/100000007/pointing1_00001826_1.png: baseline=1.0000
+[IMAGE 0002] data/cropped/100000007/pointing1_00001827_1.png: baseline=1.0000
+[IMAGE 0003] data/cropped/100000007/pointing1_00001828_1.png: baseline=1.0000
+ :
+ :
+
+Processed 1000 images. Baseline prob: mean=0.9932 std=0.0717 min=0.0001 max=1.0000
+
+Aggregate feature impact (sorted by mean Δ):
+01. Mul      /base_model/features/features.2/block/block.2/Mul (/base_model/features/features.2/block/block.2/Mul_output_0) -> meanΔ=+0.9932 stdΔ=0.0717 meanProb=0.0000
+02. Mul      /base_model/features/features.2/block/block.5/Mul (/base_model/features/features.2/block/block.5/Mul_output_0) -> meanΔ=+0.9932 stdΔ=0.0717 meanProb=0.0000
+03. Mul      /base_model/features/features.2/block/block.6/Mul (/base_model/features/features.2/block/block.6/Mul_output_0) -> meanΔ=+0.9932 stdΔ=0.0717 meanProb=0.0000
+04. Mul      /base_model/features/features.2/out_act/Mul (/base_model/features/features.2/out_act/Mul_output_0) -> meanΔ=+0.9932 stdΔ=0.0717 meanProb=0.0000
+05. Mul      /base_model/stem/stem.5/Mul (/base_model/stem/stem.5/Mul_output_0) -> meanΔ=+0.9932 stdΔ=0.0717 meanProb=0.0000
+06. Mul      /base_model/stem/stem.2/Mul (/base_model/stem/stem.2/Mul_output_0) -> meanΔ=+0.9932 stdΔ=0.0717 meanProb=0.0000
+07. Mul      /base_model/features/features.3/out_act/Mul (/base_model/features/features.3/out_act/Mul_output_0) -> meanΔ=+0.9931 stdΔ=0.0717 meanProb=0.0000
+08. Mul      /base_model/features/features.1/out_act/Mul (/base_model/features/features.1/out_act/Mul_output_0) -> meanΔ=+0.9921 stdΔ=0.0717 meanProb=0.0010
+ :
+ :
+[INFO] Rendering heatmaps for top-6 tensors -> ablation_heatmaps/ablation_top_features.png
+[OK] Saved /base_model/stem/stem.2/Mul -> ablation_heatmaps/001_base_model_stem_stem_2_Mul.png
+[OK] Saved /base_model/stem/stem.5/Mul -> ablation_heatmaps/002_base_model_stem_stem_5_Mul.png
+[OK] Saved /base_model/features/features.2/block/block.2/Mul -> ablation_heatmaps/003_base_model_features_features_2_block_block_2_Mul.png
+[OK] Saved /base_model/features/features.2/block/block.5/Mul -> ablation_heatmaps/004_base_model_features_features_2_block_block_5_Mul.png
+[OK] Saved /base_model/features/features.2/block/block.6/Mul -> ablation_heatmaps/005_base_model_features_features_2_block_block_6_Mul.png
+[OK] Saved /base_model/features/features.2/out_act/Mul -> ablation_heatmaps/006_base_model_features_features_2_out_act_Mul.png
+Model prob_pointing=1.0000
+[COMPOSITE] Saved top-6 heatmaps -> ablation_heatmaps/ablation_top_features.png
+```
+
+- This utility clones the model, injects a learnable gate after each Sigmoid→Mul tensor (or any tensor selected via filters), and measures how much `prob_pointing` falls when each gate is zeroed.
+- With `--image-dir` the script walks the directory (lexicographic order), processes up to `--max-images` crops, and reuses a single ONNX Runtime session, so running 100 images is practical.
+- Increase `--max-images` (e.g., 1000) to cover more crops; the script simply takes the first N entries after sorting paths.
+- Console output includes:
+  - Per-image baselines when multiple inputs are provided (`[IMAGE 012] ... baseline=0.8531`), summarised at the end with mean/std/min/max.
+  - An aggregate ranking (`meanΔ`, `stdΔ`, `meanProb`) showing how strongly each tensor contributes across the sampled set. Large positive `meanΔ` means the score collapses without that feature, indicating heavy reliance on that block.
+  - In single-image mode, the script prints every `[ABLATE]` line so you can trace exactly which feature map drove the prediction up or down.
+- Practical interpretation:
+  - Compare rankings across pointing vs. non-pointing folders to see which stages distinguish positives; e.g., if `features.2/out_act` always yields `Δ≈1.0`, that stage is critical.
+  - High `stdΔ` flags tensors whose influence varies sharply; inspect those cases with the heatmap script to spot context-specific attention.
+  - Negative or near-zero deltas imply the network barely uses that tensor for the sampled images, hinting at redundancy or opportunities for pruning.
+- By default the top 6 tensors (highest mean Δ) are auto-visualised via `10_visualize_pgc_heatmaps.py` using the first processed crop; their heatmaps plus a 3×2 collage (filled column-by-column so the most influential maps occupy the left column) land under `ablation_heatmaps/`. Override or disable this behaviour with `--topk-heatmaps 0`, `--topk-image`, or `--topk-output-dir`.
+
 ## Dataset Preparation
 
 https://gibranbenitez.github.io/IPN_Hand/ CC BY 4.0

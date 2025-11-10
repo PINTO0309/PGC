@@ -217,6 +217,7 @@ VSDLM/
 OCEC/
 ocec/
 runs/
+*heatmaps*/
 *.onnx
 *.pt
 *.pth
