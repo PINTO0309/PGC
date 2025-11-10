@@ -21,6 +21,22 @@ class ModelConfig:
     head_variant: str = "auto"
     token_mixer_grid: tuple[int, int] = (2, 3)
     token_mixer_layers: int = 2
+    rgb_to_yuv_to_y: bool = False
+
+
+class _RgbToY(nn.Module):
+    """Fixed RGB -> YUV conversion that keeps only the luma component."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        coeffs = torch.tensor([0.299, 0.587, 0.114], dtype=torch.float32).view(1, 3, 1, 1)
+        self.register_buffer("coeffs", coeffs, persistent=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        coeffs = self.coeffs
+        if coeffs.dtype != x.dtype:
+            coeffs = coeffs.to(dtype=x.dtype)
+        return (x * coeffs).sum(dim=1, keepdim=True)
 
 
 class _SepConvBlock(nn.Module):
@@ -331,6 +347,9 @@ class PGC(nn.Module):
         self.config = config or ModelConfig()
         base = self.config.base_channels
         num_blocks = max(1, self.config.num_blocks)
+        self._use_luma_input = bool(getattr(self.config, "rgb_to_yuv_to_y", False))
+        self._rgb_to_y = _RgbToY() if self._use_luma_input else None
+        input_channels = 1 if self._use_luma_input else 3
         variant = (self.config.arch_variant or "baseline").lower()
         head_variant = getattr(self.config, "head_variant", "auto")
         if head_variant:
@@ -349,13 +368,13 @@ class PGC(nn.Module):
 
         if variant == "baseline":
             stem_layers = [
-                nn.Conv2d(3, base, kernel_size=3, stride=2, padding=1, bias=False),
+                nn.Conv2d(input_channels, base, kernel_size=3, stride=2, padding=1, bias=False),
                 nn.BatchNorm2d(base),
                 nn.ReLU(inplace=True),
             ]
         elif variant == "inverted_se":
             stem_layers = [
-                nn.Conv2d(3, base, kernel_size=3, stride=1, padding=1, bias=False),
+                nn.Conv2d(input_channels, base, kernel_size=3, stride=1, padding=1, bias=False),
                 nn.BatchNorm2d(base),
                 nn.SiLU(inplace=True),
                 nn.Conv2d(base, base, kernel_size=3, stride=2, padding=1, bias=False),
@@ -364,7 +383,7 @@ class PGC(nn.Module):
             ]
         elif variant == "convnext":
             stem_layers = [
-                nn.Conv2d(3, base, kernel_size=4, stride=4, padding=0, bias=True),
+                nn.Conv2d(input_channels, base, kernel_size=4, stride=4, padding=0, bias=True),
                 _LayerNorm2d(base),
             ]
         else:
@@ -410,6 +429,8 @@ class PGC(nn.Module):
                 nn.init.zeros_(m.bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self._rgb_to_y is not None:
+            x = self._rgb_to_y(x)
         x = self.stem(x)
         x = self.features(x)
         if self._head_variant in {"transformer", "mlp_mixer"}:
